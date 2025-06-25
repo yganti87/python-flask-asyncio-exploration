@@ -1,7 +1,3 @@
-# Monkey patch for gevent compatibility - MUST be at the very top
-import gevent.monkey
-gevent.monkey.patch_all()
-
 import asyncio
 import uuid
 import time
@@ -12,8 +8,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 import queue
 
-# Import the ThreadPoolBasedAsyncTaskManager from its own file
+# Import the async task managers from their respective files
 from thread_pool_async_task_manager import ThreadPoolBasedAsyncTaskManager
+from gevent_async_task_manager import GeventBasedAsyncTaskManager
 
 # Remove logging setup and use print statements instead
 print(f"AsyncTaskManager initialized for process {os.getpid()}")
@@ -215,5 +212,3 @@ class AsyncTaskManager:
             except Exception as e:
                 self._print_async('error', f"Error during shutdown: {e}")
 
-# Global instance - Use ThreadPoolBasedAsyncTaskManager by default
-async_task_manager = ThreadPoolBasedAsyncTaskManager() 

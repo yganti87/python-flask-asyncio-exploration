@@ -5,23 +5,17 @@ import threading
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from base_async_task_manager import BaseAsyncTaskManager
 
-class ThreadPoolBasedAsyncTaskManager:
+class ThreadPoolBasedAsyncTaskManager(BaseAsyncTaskManager):
     def __init__(self, max_workers=4):
+        super().__init__()
         self._executor = None
-        self._running = False
-        self._active_tasks = 0
         self._max_workers = max_workers
         self._start_thread_pool()
     
-    def _print_async(self, level: str, message: str):
-        """Print method that doesn't interfere with the thread pool."""
-        try:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            print(f"[{timestamp}] [{level.upper()}] {message}")
-        except Exception as e:
-            # If printing fails, write to stderr as fallback
-            print(f"Print error: {e} - Original message: {message}", file=sys.stderr)
+    def get_manager_type(self) -> str:
+        return "thread_pool"
     
     def _start_thread_pool(self):
         """Start a thread pool for handling async tasks."""
@@ -101,69 +95,11 @@ class ThreadPoolBasedAsyncTaskManager:
         time.sleep(0.1)  # Regular sleep since we're using thread pool
         self._start_thread_pool()
     
-    def _execute_long_running_task(self, request_uuid: str, user_data: dict = None):
-        """
-        Execute the actual long-running task in a separate thread.
-        This prevents blocking the main request handling.
-        """
-        start_time = time.time()
-        thread_id = threading.current_thread().ident
-        self._print_async('info', f"Starting async task for request UUID: {request_uuid} (PID: {os.getpid()}, Thread: {thread_id})")
-        
-        try:
-            print(f"Starting async task for request UUID: {request_uuid} (PID: {os.getpid()})")
-            # Simulate some work (this runs in a separate thread)
-            time.sleep(5)  # Simulate 5 seconds of work
-            
-            # Simulate some potential errors (10% chance)
-            import random
-            if random.random() < 0.1:
-                raise Exception(f"Simulated error in async task for UUID: {request_uuid}")
-            
-            # Simulate more work
-            time.sleep(3)
-            
-            # Log success
-            end_time = time.time()
-            duration = end_time - start_time
-            self._print_async('info',
-                f"Async task completed successfully for request UUID: {request_uuid} "
-                f"(duration: {duration:.2f}s, PID: {os.getpid()}, Thread: {thread_id}, user_data: {user_data})"
-            )
-            
-            return {"status": "success", "duration": duration, "uuid": request_uuid}
-            
-        except Exception as e:
-            # Log error
-            end_time = time.time()
-            duration = end_time - start_time
-            self._print_async('error',
-                f"Async task failed for request UUID: {request_uuid} "
-                f"(duration: {duration:.2f}s, PID: {os.getpid()}, Thread: {thread_id}, error: {str(e)})"
-            )
-            raise
-    
-    def _handle_task_completion(self, request_uuid: str, future):
-        """Handle the completion of an async task."""
-        try:
-            result = future.result()
-            # Simple decrement without lock (gevent-friendly)
-            self._active_tasks = max(0, self._active_tasks - 1)
-            self._print_async('info', f"Task completion handled for request UUID: {request_uuid} (PID: {os.getpid()}, Active: {self._active_tasks})")
-        except Exception as e:
-            # Simple decrement without lock (gevent-friendly)
-            self._active_tasks = max(0, self._active_tasks - 1)
-            self._print_async('error', f"Task completion error for request UUID: {request_uuid} (PID: {os.getpid()}): {str(e)}")
-    
     def get_status(self):
         """Get the current status of the async task manager."""
-        return {
-            "running": self._running,
-            "active_tasks": self._active_tasks,
-            "max_workers": self._max_workers,
-            "pid": os.getpid(),
-            "type": "thread_pool"
-        }
+        status = super().get_status()
+        status["max_workers"] = self._max_workers
+        return status
     
     def shutdown(self):
         """Shutdown the async task manager."""
@@ -173,7 +109,7 @@ class ThreadPoolBasedAsyncTaskManager:
                 self._running = False
                 
                 # Shutdown executor gracefully
-                self._executor.shutdown(wait=True, timeout=10)
+                self._executor.shutdown(wait=True)
                 
                 self._print_async('info', f"ThreadPoolBasedAsyncTaskManager shutdown complete (PID: {os.getpid()})")
             except Exception as e:

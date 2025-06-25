@@ -7,23 +7,26 @@ import uuid
 import atexit
 import signal
 import sys
-from async_task_manager import async_task_manager
+from async_task_manager_factory import AsyncTaskManagerFactory, TaskManagerType
 from datetime import datetime
 import os
 
 app = Flask(__name__)
 
+# Initialize the factory for this worker process
+factory = AsyncTaskManagerFactory.get_instance()
+
 def cleanup():
     """Cleanup function to ensure proper shutdown of async task manager."""
-    print("Shutting down async task manager...")
-    async_task_manager.shutdown()
+    print(f"Shutting down async task manager for PID {os.getpid()}...")
+    factory.shutdown()
 
 # Register cleanup function
 atexit.register(cleanup)
 
 def signal_handler(signum, frame):
     """Handle shutdown signals."""
-    print(f"Received signal {signum}, shutting down...")
+    print(f"Received signal {signum}, shutting down PID {os.getpid()}...")
     cleanup()
     sys.exit(0)
 
@@ -43,6 +46,10 @@ def detect_worker_class():
     else:
         return 'unknown'
 
+def get_task_manager():
+    """Get the task manager for the current worker process."""
+    return factory.get_task_manager()
+
 @app.route('/hello', methods=['GET'])
 def hello():
     # Generate a unique UUID for this request
@@ -57,7 +64,8 @@ def hello():
     }
     
     # Trigger the async task (non-blocking)
-    async_task_manager.trigger_async_task(request_uuid, user_data)
+    task_manager = get_task_manager()
+    task_manager.trigger_async_task(request_uuid, user_data)
     
     # Return immediate response (not blocked by async task)
     return jsonify({
@@ -84,7 +92,8 @@ def index():
     }
     
     # Trigger the async task (non-blocking)
-    async_task_manager.trigger_async_task(request_uuid, user_data)
+    task_manager = get_task_manager()
+    task_manager.trigger_async_task(request_uuid, user_data)
     
     return jsonify({
         'message': 'Welcome to Flask Async Exploration',
@@ -104,7 +113,8 @@ def index():
 @app.route('/status', methods=['GET'])
 def status():
     """Endpoint to check application status without triggering async task."""
-    async_status = async_task_manager.get_status()
+    task_manager = get_task_manager()
+    async_status = task_manager.get_status()
     return jsonify({
         'status': 'running',
         'message': 'Application is running with async task manager',
@@ -120,7 +130,8 @@ def status():
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint that doesn't trigger async tasks."""
-    async_status = async_task_manager.get_status()
+    task_manager = get_task_manager()
+    async_status = task_manager.get_status()
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
