@@ -40,7 +40,7 @@ class AsyncTaskManagerFactory:
             self._task_managers[pid] = self.create_task_manager(self._manager_type)
         return self._task_managers[pid]
     
-    def set_task_manager(self, manager_type: TaskManagerType = TaskManagerType.THREAD_POOL, **kwargs):
+    def set_task_manager(self, manager_type: TaskManagerType = TaskManagerType.GEVENT, **kwargs):
         """Set a new task manager instance."""
         pid = os.getpid()
         
@@ -60,7 +60,7 @@ class AsyncTaskManagerFactory:
         Create and return an async task manager of the specified type.
         
         Args:
-            manager_type: Type of task manager to create (default: THREAD_POOL)
+            manager_type: Type of task manager to create (default: GEVENT)
             **kwargs: Additional arguments to pass to the task manager constructor
             
         Returns:

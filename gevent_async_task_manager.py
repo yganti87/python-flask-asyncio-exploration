@@ -11,7 +11,7 @@ from base_async_task_manager import BaseAsyncTaskManager
 class GeventBasedAsyncTaskManager(BaseAsyncTaskManager):
     """Async task manager using gevent greenlets for background task execution."""
     
-    def __init__(self, max_workers=4):
+    def __init__(self, max_workers=100):  # Much higher default for greenlets
         super().__init__()
         self._max_workers = max_workers
         self._pool = None
@@ -38,7 +38,7 @@ class GeventBasedAsyncTaskManager(BaseAsyncTaskManager):
         else:
             try:
                 print(f"DEBUG: Creating gevent pool with {self._max_workers} workers (PID: {current_pid})")
-                self._pool = Pool()
+                self._pool = Pool(self._max_workers)
                 self._running = True
                 self._pid = current_pid
                 self._print_async('info', f"Gevent pool started with {self._max_workers} workers (PID: {current_pid})")
