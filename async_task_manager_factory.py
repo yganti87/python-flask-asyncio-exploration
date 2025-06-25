@@ -28,11 +28,13 @@ class AsyncTaskManagerFactory:
     def __init__(self):
         # Don't create task manager in __init__ - create it lazily
         self._task_manager = None
-        self._manager_type = TaskManagerType.THREAD_POOL  # Default to thread pool
+        self._manager_type = TaskManagerType.GEVENT  # Default to thread pool
     
     def get_task_manager(self):
         """Get the current task manager instance, creating it if necessary."""
         pid = os.getpid()
+        print(f"DEBUG: get_task_manager called, pid={pid}")
+        print(f"DEBUG: _task_managers={self._task_managers}")
         if pid not in self._task_managers:
             print(f"DEBUG: Creating new task manager for PID {pid}")
             self._task_managers[pid] = self.create_task_manager(self._manager_type)
@@ -53,7 +55,7 @@ class AsyncTaskManagerFactory:
         return self._task_managers[pid]
     
     @staticmethod
-    def create_task_manager(manager_type: TaskManagerType = TaskManagerType.THREAD_POOL, **kwargs):
+    def create_task_manager(manager_type: TaskManagerType = TaskManagerType.GEVENT, **kwargs):
         """
         Create and return an async task manager of the specified type.
         

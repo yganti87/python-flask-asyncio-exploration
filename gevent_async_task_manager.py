@@ -32,22 +32,23 @@ class GeventBasedAsyncTaskManager(BaseAsyncTaskManager):
             self._running = False
             self._pool = None
         
-        if self._running and self._pool:
+        print(f"DEBUG: _running={self._running}, _pool={self._pool}")
+        if self._running:
             self._print_async('info', f"Gevent pool already running (PID: {current_pid})")
-            return
-            
-        try:
-            self._pool = Pool(self._max_workers)
-            self._running = True
-            self._pid = current_pid
-            self._print_async('info', f"Gevent pool started with {self._max_workers} workers (PID: {current_pid})")
-            print(f"DEBUG: Gevent pool created: {self._pool}")
-        except Exception as e:
-            self._print_async('error', f"Failed to start gevent pool: {e}")
-            print(f"DEBUG: Gevent pool error: {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+        else:
+            try:
+                print(f"DEBUG: Creating gevent pool with {self._max_workers} workers (PID: {current_pid})")
+                self._pool = Pool()
+                self._running = True
+                self._pid = current_pid
+                self._print_async('info', f"Gevent pool started with {self._max_workers} workers (PID: {current_pid})")
+                print(f"DEBUG: Gevent pool created: {self._pool}")
+            except Exception as e:
+                self._print_async('error', f"Failed to start gevent pool: {e}")
+                print(f"DEBUG: Gevent pool error: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
     
     def trigger_async_task(self, request_uuid: str, user_data: dict = None):
         """
@@ -58,12 +59,6 @@ class GeventBasedAsyncTaskManager(BaseAsyncTaskManager):
         print(f"DEBUG: trigger_async_task called for UUID: {request_uuid} (PID: {current_pid})")
         print(f"DEBUG: _running={self._running}, _pool={self._pool}, _pid={self._pid}, current_pid={current_pid}")
         
-        # Always check if we need to reinitialize (in case of process forking)
-        self._start_gevent_pool()
-        
-        if not self._running or not self._pool:
-            self._print_async('error', "Gevent pool failed to initialize")
-            raise RuntimeError("Gevent pool failed to start")
         
         try:
             print(f"DEBUG: About to submit task to gevent pool (PID: {current_pid})")
